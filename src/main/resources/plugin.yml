@@ -1,0 +1,10 @@
+name: NBTedit
+version: '${project.version}'
+main: me.jake.nbtedit.NBTedit
+api-version: '1.20'
+authors: [JakeWest]
+commands:
+  nbtedit:
+    usage: /<command>
+    aliases: [nbt]
+    description: Command to edit NBT's! Enjoy!
