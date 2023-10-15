@@ -10,7 +10,6 @@ import org.bukkit.command.CommandSender
 import org.bukkit.command.TabCompleter
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.ItemMeta
 import java.util.*
 
 @SuppressWarnings("NullableProblems")
@@ -24,32 +23,19 @@ class ItemCommandManager : CommandExecutor, TabCompleter {
         commands.add(ItemCheck())
     }
 
+    abstract class SubCommand {
+        abstract fun getName(): String
+        abstract fun getDescription(): String
+        abstract fun getSyntax(): String
+        abstract fun getPermission(): String
+        abstract fun execute(player: Player, vararg args: String)
+    }
+
     class ItemView : SubCommand() {
-        override fun getName(): String {
-            return "view"
-        }
-
-        override fun getDescription(): String {
-            return "View the value of specified NBT tag."
-        }
-
-        override fun getSyntax(): String {
-            return "/nbtitem view (tag)"
-        }
-
-        override fun getPermission(): String {
-            return "nbtedit.admin"
-        }
-
-        override val name: String
-            get() = "view"
-        override val description: String
-            get() = "View the value of specified NBT tag."
-        override val syntax: String
-            get() = "/nbtitem view (tag)"
-        override val permission: String
-            get() = "nbtedit.admin"
-
+        override fun getName(): String = "view"
+        override fun getDescription(): String = "View the value of specified NBT tag."
+        override fun getSyntax(): String = "/nbtitem view (tag)"
+        override fun getPermission(): String = "nbtedit.admin"
 
         override fun execute(player: Player, vararg args: String) {
             val item = player.inventory.itemInMainHand
@@ -59,20 +45,20 @@ class ItemCommandManager : CommandExecutor, TabCompleter {
             }
             try {
                 val tag = args[1]
-                val value: Any
-                if (NBTEditor.contains(item, tag)) {
-                    val sVal = NBTEditor.getString(item, tag)
-                    val iVal = NBTEditor.getInt(item, tag)
-                    val bVal = NBTEditor.getBoolean(item, tag)
-                    value = sVal ?: if (iVal == 0) {
-                        bVal
-                    } else {
-                        iVal
+                val value: Any = when {
+                    NBTEditor.contains(item, tag) -> {
+                        val sVal = NBTEditor.getString(item, tag)
+                        val iVal = NBTEditor.getInt(item, tag)
+                        val bVal = NBTEditor.getBoolean(item, tag)
+                        sVal ?: if (iVal == 0) bVal else iVal
                     }
-                    ChatUtils.tell(player, "The value of '&a$tag&f' is '&a$value&f'.")
-                } else {
-                    ChatUtils.tell(player, "The item doesn't contain tag: &c$tag")
+
+                    else -> {
+                        ChatUtils.tell(player, "The item doesn't contain tag: &c$tag")
+                        return
+                    }
                 }
+                ChatUtils.tell(player, "The value of '&a$tag&f' is '&a$value&f'.")
             } catch (indexException: IndexOutOfBoundsException) {
                 ChatUtils.tell(player, "Please use correct Syntax.")
                 ChatUtils.tell(player, getSyntax())
@@ -82,33 +68,11 @@ class ItemCommandManager : CommandExecutor, TabCompleter {
         }
     }
 
-
     class ItemSet : SubCommand() {
-        override fun getName(): String {
-            return "set"
-        }
-
-        override fun getDescription(): String {
-            return "Set the NBT tag of an Item"
-        }
-
-        override fun getSyntax(): String {
-            return "/nbtitem set (tag) (value)"
-        }
-
-        override fun getPermission(): String {
-            return "nbtedit.admin"
-        }
-
-        override val name: String
-            get() = "set"
-        override val description: String
-            get() = "Set the NBT tag of an Item"
-        override val syntax: String
-            get() = "/nbtitem set (tag) (value)"
-        override val permission: String
-            get() = "nbtedit.admin"
-
+        override fun getName(): String = "set"
+        override fun getDescription(): String = "Set the NBT tag of an Item"
+        override fun getSyntax(): String = "/nbtitem set (tag) (value)"
+        override fun getPermission(): String = "nbtedit.admin"
 
         override fun execute(player: Player, vararg args: String) {
             val item = player.inventory.itemInMainHand
@@ -131,91 +95,79 @@ class ItemCommandManager : CommandExecutor, TabCompleter {
         }
     }
 
-
     class ItemCheck : SubCommand() {
-        override fun getName(): String {
-            return "check"
-        }
-
-        override fun getDescription(): String {
-            return "Check an Item's NBT Tags."
-        }
-
-        override fun getSyntax(): String {
-            return "/nbtitem check (tag)"
-        }
-
-        override fun getPermission(): String {
-            return "nbtedit.admin"
-        }
-
-        override val name: String
-            get() = "check"
-        override val description: String
-            get() = "Check an Item's NBT Tags."
-        override val syntax: String
-            get() = "/nbtitem check (tag)"
-        override val permission: String
-            get() = "nbtedit.admin"
+        override fun getName(): String = "check"
+        override fun getDescription(): String = "Check an Item's NBT Tags."
+        override fun getSyntax(): String = "/nbtitem check (tag)"
+        override fun getPermission(): String = "nbtedit.admin"
 
         override fun execute(player: Player, vararg args: String) {
             val item: ItemStack = player.inventory.itemInMainHand
             if (item.type == Material.AIR) {
                 ChatUtils.tell(player, "You must have an item in your hand.")
-            } else {
-                var name: String = item.type.name
-                if (Objects.requireNonNull<ItemMeta>(item.itemMeta).hasDisplayName()) {
-                    name = item.itemMeta?.displayName.toString()
-                }
-                try {
-                    val tag = args[1]
-                    val hasTag: Boolean = NBTEditor.contains(item, tag)
-                    val response = if (hasTag) "has" else "does not have"
-                    ChatUtils.tell(player, "$name&f $response the tag: &a$tag")
-                } catch (var8: IndexOutOfBoundsException) {
-                    ChatUtils.tell(player, "Please use correct Syntax.")
-                    ChatUtils.tell(player, getSyntax())
-                } catch (var9: Exception) {
-                    ChatUtils.tell(player, "An error occurred.")
-                }
+                return
+            }
+            var name: String = item.type.name
+            if (item.itemMeta?.hasDisplayName() == true) {
+                name = item.itemMeta?.displayName.toString()
+            }
+            try {
+                val tag = args[1]
+                val hasTag: Boolean = NBTEditor.contains(item, tag)
+                val response = if (hasTag) "has" else "does not have"
+                ChatUtils.tell(player, "$name&f $response the tag: &a$tag")
+            } catch (var8: IndexOutOfBoundsException) {
+                ChatUtils.tell(player, "Please use correct Syntax.")
+                ChatUtils.tell(player, getSyntax())
+            } catch (var9: Exception) {
+                ChatUtils.tell(player, "An error occurred.")
             }
         }
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
-
-        if (sender is Player) {
-
-            if (args.isNotEmpty()) {
-                for (cmd in commands) {
-                    if (args[0].lowercase(Locale.getDefault()) == cmd.getName()) {
-                        if (sender.hasPermission(cmd.getPermission())) {
-                            cmd.execute(sender, *args)
-                        } else {
-                            ChatUtils.tell(sender, "You don't have permission.")
-                        }
-                        return true
-                    }
-                }
-            }
-            ChatUtils.tell(sender, "Invalid Syntax.")
+        if (sender !is Player) {
+            return true
         }
+
+        if (args.isNotEmpty()) {
+            val commandName = args[0].lowercase(Locale.getDefault())
+            val matchingCommand = commands.find { it.getName() == commandName }
+
+            if (matchingCommand != null) {
+                if (sender.hasPermission(matchingCommand.getPermission())) {
+                    matchingCommand.execute(sender, *args)
+                } else {
+                    ChatUtils.tell(sender, "You don't have permission.")
+                }
+                return true
+            }
+        }
+
+        ChatUtils.tell(sender, "Invalid Syntax.")
         return true
     }
 
-    override fun onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array<String>): MutableList<String> {
+    override fun onTabComplete(
+        sender: CommandSender,
+        command: Command,
+        alias: String,
+        args: Array<String>
+    ): MutableList<String> {
+        val tabComplete = mutableListOf<String>()
 
-        val tabComplete = ArrayList<String>()
-
-        if (args.size == 1) {
-            for (cmds in commands) {
-                if (cmds.getName().startsWith(args[0].lowercase(Locale.getDefault()))) tabComplete.add(cmds.getName())
+        when (args.size) {
+            1 -> {
+                val arg1 = args[0].lowercase(Locale.getDefault())
+                tabComplete.addAll(commands.filter { it.getName().startsWith(arg1) }.map { it.getName() })
             }
-        }
 
-        if (args.size == 2) {
-            for (key in NBTEditor.getKeys((sender as Player).inventory.itemInMainHand)) {
-                if (key.lowercase(Locale.getDefault()).startsWith(args[1].lowercase(Locale.getDefault()))) tabComplete.add(key)
+            2 -> {
+                val arg2 = args[1].lowercase(Locale.getDefault())
+                if (sender is Player) {
+                    tabComplete.addAll(NBTEditor.getKeys(sender.inventory.itemInMainHand)
+                        .filter { it.lowercase(Locale.getDefault()).startsWith(arg2) })
+                }
             }
         }
 
