@@ -1,5 +1,3 @@
-@file:Suppress("SameParameterValue")
-
 package me.jake.nbtedit.util
 
 import org.bukkit.ChatColor
@@ -11,11 +9,11 @@ object ChatUtils {
         player.sendMessage(processString("&d&lNBTeditor &7| &f $message"))
     }
 
-    private fun processString(s: String): String {
+    fun processString(s: String): String {
         return ChatColor.translateAlternateColorCodes('&', translateHexColorCodes("#", "", s))
     }
 
-    private fun translateHexColorCodes(startTag: String, endTag: String, message: String): String {
+    fun translateHexColorCodes(startTag: String, endTag: String, message: String): String {
         val hexPattern = Pattern.compile("$startTag([A-Fa-f0-9]{6})$endTag")
         val matcher = hexPattern.matcher(message)
         val buffer = StringBuffer(message.length + 4 * 8)
@@ -29,5 +27,5 @@ object ChatUtils {
             )
         }
         return matcher.appendTail(buffer).toString()
-    }
+    } // This code defines a set of utility methods for processing and sending messages
 }

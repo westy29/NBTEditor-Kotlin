@@ -2,19 +2,22 @@ package me.jake.nbtedit.util
 
 object DataFinder {
     fun getType(data: String): Any {
-        if (isInteger(data)) return data.toInt()
-        return if (isBoolean(data)) data.toBoolean() else data
+        return when {
+            isInteger(data) -> data.toInt()
+            isBoolean(data) -> data.toBoolean()
+            else -> data
+        }
     }
 
     private fun isInteger(data: String): Boolean {
-        try {
+        return try {
             data.toInt()
+            true
         } catch (e: NumberFormatException) {
-            return false
+            false
         } catch (e: NullPointerException) {
-            return false
+            false
         }
-        return true
     }
 
     private fun isBoolean(data: String): Boolean {
